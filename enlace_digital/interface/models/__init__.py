@@ -1,0 +1,1 @@
+from enlace_digital.settings.get_db import Base
