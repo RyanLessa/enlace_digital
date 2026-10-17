@@ -1,0 +1,57 @@
+from pydantic import Field, field_validator
+
+from enlace_digital.interface.models.enums import Grupo
+
+from .base import Presenter
+from .neighborhood import NeighborhoodPresenter
+
+
+class SchoolSearchParams(Presenter):
+    neighborhood_id: int | None = Field(default=None, ge=1)
+    groups: list[Grupo] = Field(default_factory=list, max_length=5)
+    q: str | None = Field(default=None, max_length=200)
+    limit: int = Field(default=20, ge=1, le=100)
+    offset: int = Field(default=0, ge=0)
+
+    @field_validator("groups")
+    @classmethod
+    def validate_unique_groups(cls, groups: list[Grupo]) -> list[Grupo]:
+        if len(groups) != len(set(groups)):
+            raise ValueError("Cada grupo pode aparecer apenas uma vez.")
+        return groups
+
+    @field_validator("q")
+    @classmethod
+    def strip_search_text(cls, query: str | None) -> str | None:
+        if query is None:
+            return None
+        query = query.strip()
+        return query or None
+
+
+class SchoolGroupScorePresenter(Presenter):
+    group: Grupo
+    has_adaptation: bool
+    average: float | None
+    review_count: int = Field(ge=0)
+
+
+class SchoolPresenter(Presenter):
+    id: int
+    name: str
+    neighborhood: NeighborhoodPresenter
+    address: str | None
+    scores: list[SchoolGroupScorePresenter]
+
+
+class SchoolSearchItemPresenter(Presenter):
+    id: int
+    name: str
+    matched_groups: list[Grupo]
+    ranking_score: float | None
+
+
+class SchoolSearchPresenter(Presenter):
+    items: list[SchoolSearchItemPresenter]
+    limit: int = Field(ge=1, le=100)
+    offset: int = Field(ge=0)
