@@ -2,13 +2,13 @@ from datetime import datetime
 
 from pydantic import AliasChoices, Field, field_validator
 
-from enlace_digital.interface.models.enums import Grupo, NOTA_MAX, NOTA_MIN
+from enlace_digital.interface.models.enums import Group, NOTA_MAX, NOTA_MIN
 
 from .base import Presenter
 
 
 class ReviewScorePresenter(Presenter):
-    group: Grupo
+    group: Group
     score: int = Field(strict=True, ge=NOTA_MIN, le=NOTA_MAX)
 
 
@@ -51,3 +51,8 @@ class ReviewListPresenter(Presenter):
     items: list[ReviewPresenter]
     limit: int = Field(ge=1, le=100)
     offset: int = Field(ge=0)
+
+
+class ReviewListParams(Presenter):
+    limit: int = Field(default=20, ge=1, le=100)
+    offset: int = Field(default=0, ge=0)

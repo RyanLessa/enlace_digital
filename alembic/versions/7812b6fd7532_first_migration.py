@@ -66,7 +66,7 @@ def upgrade() -> None:
     op.create_index('uq_review_user_school', 'reviews', ['user_id', 'school_id'], unique=True, sqlite_where=sa.text('user_id IS NOT NULL'))
     op.create_table('school_group_scores',
     sa.Column('school_id', sa.Integer(), nullable=False),
-    sa.Column('group', sa.Enum('visual', 'motora', 'intelectual', 'auditiva', 'psicossocial', name='grupo', native_enum=False, length=20), nullable=False),
+    sa.Column('group', sa.Enum('visual', 'motora', 'intelectual', 'auditiva', 'psicossocial', name='group', native_enum=False, length=20), nullable=False),
     sa.Column('has_adaptation', sa.Boolean(), server_default=sa.text('0'), nullable=False),
     sa.Column('review_count', sa.Integer(), server_default=sa.text('0'), nullable=False),
     sa.Column('score_sum', sa.Integer(), server_default=sa.text('0'), nullable=False),
@@ -77,7 +77,7 @@ def upgrade() -> None:
     op.create_index('ix_wallet_group_school', 'school_group_scores', ['group', 'school_id'], unique=False)
     op.create_table('review_group_scores',
     sa.Column('review_id', sa.Integer(), nullable=False),
-    sa.Column('group', sa.Enum('visual', 'motora', 'intelectual', 'auditiva', 'psicossocial', name='grupo', native_enum=False, length=20), nullable=False),
+    sa.Column('group', sa.Enum('visual', 'motora', 'intelectual', 'auditiva', 'psicossocial', name='group', native_enum=False, length=20), nullable=False),
     sa.Column('score', sa.Integer(), nullable=False),
     sa.CheckConstraint('score BETWEEN 1 AND 5', name='ck_score_range'),
     sa.ForeignKeyConstraint(['review_id'], ['reviews.id'], ),

@@ -3,7 +3,7 @@ import enum
 from sqlalchemy import Enum
 
 
-class Grupo(str, enum.Enum):
+class Group(str, enum.Enum):
     VISUAL = "visual"
     MOTORA = "motora"
     INTELECTUAL = "intelectual"
@@ -14,9 +14,9 @@ class Grupo(str, enum.Enum):
 NOTA_MIN = 1
 NOTA_MAX = 5
 
-GrupoCol = Enum(
-    Grupo,
+GroupCol = Enum(
+    Group,
     native_enum=False,
     length=20,
-    values_callable=lambda grupo: [membro.value for membro in grupo],
+    values_callable=lambda group: [member.value for member in group],
 )

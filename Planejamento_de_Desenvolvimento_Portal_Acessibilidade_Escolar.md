@@ -76,7 +76,7 @@ erDiagram
 ```python
 import enum
 
-class Grupo(str, enum.Enum):
+class Group(str, enum.Enum):
     VISUAL = "visual"
     MOTORA = "motora"
     INTELECTUAL = "intelectual"
@@ -92,7 +92,7 @@ from sqlalchemy import (CheckConstraint, Enum, ForeignKey, Index, String,
                         UniqueConstraint, func, text)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-GrupoCol = Enum(Grupo, native_enum=False, length=20,
+GroupCol = Enum(Group, native_enum=False, length=20,
                 values_callable=lambda e: [m.value for m in e])  # guarda "visual", não "VISUAL"
 
 class Base(DeclarativeBase): ...
@@ -122,7 +122,7 @@ class School(Base):
 class SchoolGroupScore(Base):
     __tablename__ = "school_group_scores"
     school_id: Mapped[int] = mapped_column(ForeignKey("schools.id"), primary_key=True)
-    group: Mapped[Grupo] = mapped_column(GrupoCol, primary_key=True)
+    group: Mapped[Group] = mapped_column(GroupCol, primary_key=True)
     has_adaptation: Mapped[bool] = mapped_column(default=False)
     review_count: Mapped[int] = mapped_column(default=0)
     score_sum: Mapped[int] = mapped_column(default=0)               # inteiro: notas são inteiras
@@ -162,7 +162,7 @@ class Review(Base):
 class ReviewGroupScore(Base):
     __tablename__ = "review_group_scores"
     review_id: Mapped[int] = mapped_column(ForeignKey("reviews.id"), primary_key=True)
-    group: Mapped[Grupo] = mapped_column(GrupoCol, primary_key=True)
+    group: Mapped[Group] = mapped_column(GroupCol, primary_key=True)
     score: Mapped[int]
     review: Mapped[Review] = relationship(back_populates="scores")
     __table_args__ = (CheckConstraint(f"score BETWEEN {NOTA_MIN} AND {NOTA_MAX}",
@@ -250,7 +250,7 @@ Guardamos **soma e contagem**, e a nota é `score_sum / review_count`. A soma s�
 Toda mudança passa por uma função que aplica **diferenças** (podem ser negativas) com `UPDATE` feito no SQL, nunca "lê, calcula em Python e grava" (esse jeito perde atualizações quando dois envios chegam juntos).
 
 ```python
-def apply_score_delta(db, school_id: int, group: Grupo, *, d_count: int, d_sum: int) -> None:
+def apply_score_delta(db, school_id: int, group: Group, *, d_count: int, d_sum: int) -> None:
     result = db.execute(
         update(SchoolGroupScore)
         .where(SchoolGroupScore.school_id == school_id,
@@ -529,7 +529,7 @@ Presenters validam entrada (grupo no enum, nota de 1 a 5, sem repetição, de 1 
 | Etapa | Entrega |
 |---|---|
 | 0. Preparação | Repositório, ambiente, FastAPI mínimo, SQLAlchemy com SQLite e PRAGMAs, Alembic, pytest |
-| 1. Dados | Enum `Grupo`, models, migration inicial, constraints |
+| 1. Dados | Enum `Group`, models, migration inicial, constraints |
 | 2. Importação | Script de CSV (UC09) com carteira inicial e relatório de erros |
 | 3. Leitura | `/neighborhoods`, `/schools` com filtro e ordenação, `/schools/{id}` |
 | 4. Contas | Cadastro, login e token opcional nas rotas de avaliação |

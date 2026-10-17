@@ -3,7 +3,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from enlace_digital.settings.get_db import Base
 
-from .enums import Grupo, GrupoCol, NOTA_MAX, NOTA_MIN
+from .enums import Group, GroupCol, NOTA_MAX, NOTA_MIN
 
 
 class ReviewGroupScore(Base):
@@ -12,7 +12,7 @@ class ReviewGroupScore(Base):
     review_id: Mapped[int] = mapped_column(
         ForeignKey("reviews.id"), primary_key=True
     )
-    group: Mapped[Grupo] = mapped_column(GrupoCol, primary_key=True)
+    group: Mapped[Group] = mapped_column(GroupCol, primary_key=True)
     score: Mapped[int] = mapped_column(nullable=False)
 
     review: Mapped["Review"] = relationship(back_populates="scores")

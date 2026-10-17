@@ -1,5 +1,4 @@
 import re
-from datetime import datetime
 from typing import Literal
 
 from pydantic import Field, field_validator
@@ -36,8 +35,3 @@ class LoginPresenter(Presenter):
 class AccessTokenPresenter(Presenter):
     access_token: str
     token_type: Literal["bearer"] = "bearer"
-
-
-class UserCreatedPresenter(Presenter):
-    id: int
-    created_at: datetime
