@@ -2,8 +2,8 @@ from enlace_digital.use_cases.services import ServiceResult, UserService
 
 
 class UserController:
-    def __init__(self, service: UserService | None = None) -> None:
-        self.service = service or UserService()
+    def __init__(self, service: UserService) -> None:
+        self.service = service
 
     def register(self, *, email: str, password: str) -> ServiceResult:
         return self.service.register(email=email, password=password)

@@ -482,13 +482,13 @@ Presenters validam entrada (grupo no enum, nota de 1 a 5, sem repetição, de 1 
 - `PRAGMA foreign_keys=ON` em toda conexão (no SQLite ele vem desligado).
 - `PRAGMA journal_mode=WAL` e `busy_timeout` para leitura e escrita concorrentes; só há um escritor por vez, então mantenha transações curtas.
 - SQLAlchemy síncrono é a recomendação para este MVP, com `check_same_thread=False`.
-- Variáveis de ambiente: `DATABASE_URL`, `SECRET_KEY`, `MIN_REVIEWS_TO_DISPLAY`, `RANKING_PRIOR_MEAN` (M), `RANKING_PRIOR_WEIGHT` (C), `CORS_ORIGINS`.
+- Variáveis de ambiente: `DATABASE_URL`, `SECRET_KEY` (mínimo de 32 bytes), `MIN_REVIEWS_TO_DISPLAY`, `RANKING_PRIOR_MEAN` (M), `RANKING_PRIOR_WEIGHT` (C), `CORS_ORIGINS`.
 
 ---
 
 ## 9. Segurança e privacidade
 
-- Hash de senha com Argon2 ou bcrypt; JWT com expiração; segredo em variável de ambiente.
+- Hash de senha com bcrypt; senhas limitadas a 72 bytes UTF-8 por restrição do algoritmo; token JWT HS256 com payload contendo somente `id` do usuário e segredo em variável de ambiente. Validação/autorização dos tokens nas rotas ainda não está implementada.
 - Limite de taxa nas rotas de escrita (principalmente `POST /reviews` anônimo e login). Como anônimos contam igual na média, a prioridade de usuários na listagem **não** protege a média contra spam.
 - CORS restrito ao domínio do frontend.
 - E-mail é dado pessoal: política de privacidade, finalidade clara, nunca em respostas públicas. A exclusão de conta usa `ON DELETE SET NULL` em `reviews.user_id`; ao excluir, a avaliação vira anônima e a carteira não muda.

@@ -3,8 +3,8 @@ from enlace_digital.use_cases.services import SchoolService, ServiceResult
 
 
 class SchoolController:
-    def __init__(self, service: SchoolService | None = None) -> None:
-        self.service = service or SchoolService()
+    def __init__(self, service: SchoolService) -> None:
+        self.service = service
 
     def search(
         self,

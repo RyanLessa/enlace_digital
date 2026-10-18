@@ -1,6 +1,28 @@
-from .base import ServiceResult, not_implemented
+from sqlalchemy.orm import Session
+
+from enlace_digital.interface.repositories import NeighborhoodRepository
+
+from .base import ServiceResult
 
 
 class NeighborhoodService:
+    def __init__(
+        self,
+        session: Session,
+        repository: NeighborhoodRepository | None = None,
+    ) -> None:
+        self.repository = repository or NeighborhoodRepository(session)
+
     def list_all(self) -> ServiceResult:
-        return not_implemented("Neighborhood listing")
+        neighborhoods = self.repository.list_all()
+        return ServiceResult(
+            status_code=200,
+            content=[
+                {
+                    "id": neighborhood.id,
+                    "name": neighborhood.name,
+                    "municipality": neighborhood.municipality,
+                }
+                for neighborhood in neighborhoods
+            ],
+        )

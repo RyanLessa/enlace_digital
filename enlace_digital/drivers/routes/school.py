@@ -4,12 +4,16 @@ from fastapi.responses import JSONResponse
 from enlace_digital.drivers.presenters import SchoolSearchParams
 from enlace_digital.interface.controllers import SchoolController
 
+from .dependencies import get_school_controller
+
 router = APIRouter(prefix="/schools", tags=["schools"])
-controller = SchoolController()
 
 
 @router.get("")
-def search_schools(params: SchoolSearchParams = Depends()) -> JSONResponse:
+def search_schools(
+    params: SchoolSearchParams = Depends(),
+    controller: SchoolController = Depends(get_school_controller),
+) -> JSONResponse:
     result = controller.search(
         neighborhood_id=params.neighborhood_id,
         groups=params.groups,
@@ -21,6 +25,9 @@ def search_schools(params: SchoolSearchParams = Depends()) -> JSONResponse:
 
 
 @router.get("/{school_id}")
-def get_school(school_id: int = Path(gt=0)) -> JSONResponse:
+def get_school(
+    school_id: int = Path(gt=0),
+    controller: SchoolController = Depends(get_school_controller),
+) -> JSONResponse:
     result = controller.get_by_id(school_id)
     return JSONResponse(status_code=result.status_code, content=result.content)

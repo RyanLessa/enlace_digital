@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Path
+from fastapi import APIRouter, Depends, Path, Response
 from fastapi.responses import JSONResponse
 
 from enlace_digital.drivers.presenters import (
@@ -8,14 +8,16 @@ from enlace_digital.drivers.presenters import (
 )
 from enlace_digital.interface.controllers import ReviewController
 
+from .dependencies import get_review_controller
+
 router = APIRouter(prefix="/schools/{school_id}/reviews", tags=["reviews"])
-controller = ReviewController()
 
 
 @router.get("")
 def list_reviews(
     school_id: int = Path(gt=0),
     params: ReviewListParams = Depends(),
+    controller: ReviewController = Depends(get_review_controller),
 ) -> JSONResponse:
     result = controller.list_for_school(
         school_id=school_id,
@@ -29,6 +31,7 @@ def list_reviews(
 def create_review(
     payload: ReviewCreatePresenter,
     school_id: int = Path(gt=0),
+    controller: ReviewController = Depends(get_review_controller),
 ) -> JSONResponse:
     result = controller.create(
         school_id=school_id,
@@ -41,6 +44,7 @@ def create_review(
 def update_review(
     payload: ReviewUpdatePresenter,
     school_id: int = Path(gt=0),
+    controller: ReviewController = Depends(get_review_controller),
 ) -> JSONResponse:
     result = controller.update(
         school_id=school_id,
@@ -50,6 +54,11 @@ def update_review(
 
 
 @router.delete("/me")
-def delete_review(school_id: int = Path(gt=0)) -> JSONResponse:
+def delete_review(
+    school_id: int = Path(gt=0),
+    controller: ReviewController = Depends(get_review_controller),
+) -> Response:
     result = controller.delete(school_id=school_id)
+    if result.status_code == 204:
+        return Response(status_code=result.status_code)
     return JSONResponse(status_code=result.status_code, content=result.content)
