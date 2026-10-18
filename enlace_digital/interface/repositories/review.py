@@ -186,7 +186,8 @@ class ReviewRepository:
     def set_hidden(self, review: Review, is_hidden: bool) -> None:
         if review.is_hidden == is_hidden:
             return
-        delta = -1 if is_hidden else 1
+        delta_by_visibility = {True: -1, False: 1}
+        delta = delta_by_visibility[is_hidden]
         for score in review.scores:
             self.scores.apply_delta(
                 review.school_id,

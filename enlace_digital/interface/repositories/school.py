@@ -56,13 +56,12 @@ class SchoolRepository:
     ) -> list[SchoolSearchResult]:
         selected_groups = list(dict.fromkeys(groups or []))
         ranking = self._build_ranking_value()
+        statement = self._build_unfiltered_groups_statement(ranking=ranking)
         if selected_groups:
             statement = self._build_selected_groups_statement(
                 selected_groups=selected_groups,
                 ranking=ranking,
             )
-        else:
-            statement = self._build_unfiltered_groups_statement(ranking=ranking)
 
         statement = self._apply_search_filters(
             statement,
@@ -150,7 +149,7 @@ class SchoolRepository:
         statement = statement.where(School.is_active.is_(True))
         if neighborhood_id is not None:
             statement = statement.where(School.neighborhood_id == neighborhood_id)
-        normalized_query = SchoolRepository._normalize_name(query) if query else ""
+        normalized_query = SchoolRepository._normalize_name(query)
         if normalized_query:
             statement = statement.where(
                 School.name_normalized.contains(normalized_query)
@@ -175,12 +174,16 @@ class SchoolRepository:
                 SchoolSearchResult(
                     school=school,
                     matched_groups=matched_groups,
-                    ranking_score=(
-                        float(ranking_score) if ranking_score is not None else None
-                    ),
+                    ranking_score=SchoolRepository._to_optional_float(ranking_score),
                 )
             )
         return results
+
+    @staticmethod
+    def _to_optional_float(value: Any) -> float | None:
+        if value is None:
+            return None
+        return float(value)
 
     def get_profile(self, school_id: int) -> SchoolProfile:
         statement = (
@@ -211,11 +214,7 @@ class SchoolRepository:
             SchoolGroupScoreProfile(
                 group=score.group,
                 has_adaptation=score.has_adaptation,
-                average=(
-                    min(5.0, max(1.0, score.score_sum / score.review_count))
-                    if score.review_count >= MIN_REVIEWS_TO_DISPLAY
-                    else None
-                ),
+                average=SchoolRepository._build_display_average(score),
                 review_count=score.review_count,
             )
             for score in sorted(
@@ -223,6 +222,12 @@ class SchoolRepository:
                 key=lambda item: group_order[item.group],
             )
         )
+
+    @staticmethod
+    def _build_display_average(score: SchoolGroupScore) -> float | None:
+        if score.review_count < MIN_REVIEWS_TO_DISPLAY:
+            return None
+        return min(5.0, max(1.0, score.score_sum / score.review_count))
 
     def get_by_id(self, school_id: int) -> School | None:
         statement = (

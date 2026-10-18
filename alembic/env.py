@@ -74,7 +74,11 @@ def run_migrations_online() -> None:
             context.run_migrations()
 
 
-if context.is_offline_mode():
-    run_migrations_offline()
-else:
+def run_migrations() -> None:
+    if context.is_offline_mode():
+        run_migrations_offline()
+        return
     run_migrations_online()
+
+
+run_migrations()
