@@ -216,7 +216,7 @@ Observação: `group` é palavra reservada do SQL. O SQLAlchemy cita o nome sozi
 - **Fluxo:** marca `is_hidden` e desfaz ou refaz o efeito na carteira (seção 5.3).
 
 ### UC09 — Importar escolas por CSV *(Equipe)*
-- **Fluxo:** executa o script com a planilha → o sistema cria bairros e escolas, cria as 5 linhas da carteira de cada escola nova e marca os grupos presentes.
+- **Fluxo:** executa o script com a planilha → o sistema cria bairros e escolas e cadastra uma carteira completa com uma linha zerada para cada grupo.
 - **Regras:** idempotente (rodar de novo não duplica); linhas inválidas vão para um relatório de erros sem derrubar o restante.
 
 ---
@@ -442,20 +442,36 @@ Carregue as subavaliações com `selectinload(Review.scores)` para evitar N+1.
 
 ## 7. Importação de escolas (CSV)
 
-```
-nome,bairro,municipio,endereco,latitude,longitude,grupos
-Escola Exemplo A,Boa Viagem,Recife,Rua X 100,,,visual|auditiva
-Escola Exemplo B,Várzea,Recife,,,,motora|intelectual
+Execute os comandos a partir da raiz do repositório. Antes da primeira importação,
+aplique as migrações do banco:
+
+```bash
+source venv/bin/activate
+alembic upgrade head
 ```
 
-`python -m enlace_digital.helpers.import_schools escolas.csv`
+Salve os dados em um arquivo CSV UTF-8, por exemplo `escolas.csv`:
+
+```
+nome,bairro,municipio,endereco,latitude,longitude
+Escola Exemplo A,Boa Viagem,Recife,Rua X 100,,
+Escola Exemplo B,Várzea,Recife,,,,
+```
+
+Rode o importador informando o caminho do arquivo (relativo à pasta atual ou
+absoluto):
+
+```bash
+python -m enlace_digital.helpers.import_schools escolas.csv
+```
 
 - Cria bairros e escolas ainda inexistentes; identifica a escola por (nome normalizado, bairro) e atualiza os campos.
 - Garante as 5 linhas da carteira da escola (uma por grupo); bairros são identificados por slug e escolas por (nome normalizado, bairro).
-- Rejeita valores de grupo fora do enum com mensagem clara e gera relatório de erros.
+- A carteira é criada pelo sistema, sem depender de grupos informados no CSV; cada grupo começa com contagem e soma de notas zeradas.
 - Latitude e longitude opcionais, limitadas aos intervalos válidos.
-- `grupos` continua sendo validado como valores do enum separados por `|`; não é persistido porque o modelo atual não possui um campo de adaptação.
-- Erros de linhas individuais são reportados sem cancelar a importação das demais linhas; a execução pode ser repetida sem duplicar bairros ou escolas.
+- Cabeçalhos obrigatórios: `nome`, `bairro`, `municipio`, `endereco`, `latitude` e `longitude`. Latitude/longitude e endereço podem ficar vazios; a coluna `grupos`, se presente, é ignorada.
+- Erros de linhas individuais são reportados sem cancelar a importação das demais linhas; as linhas válidas são salvas e a execução pode ser repetida sem duplicar bairros ou escolas.
+- O resumo informa quantas linhas foram importadas e quantos erros ocorreram. O processo termina com código `0` sem erros, `1` quando houve erros em linhas e `2` quando não foi possível iniciar/concluir a importação.
 - Por que CSV e não migration: migration versiona estrutura; a lista de escolas vai mudar várias vezes e precisa poder ser reaplicada sem duplicar.
 
 ---
@@ -510,7 +526,7 @@ Presenters validam entrada (grupo no enum, nota de 1 a 5, sem repetição, de 1 
 9. **Filtro OR:** escola com os dois grupos aparece antes de escola com um, mesmo com ranking menor.
 10. **Mínimo de avaliações:** abaixo do mínimo, `average` é `null`.
 11. **Listagem:** avaliações de usuário vêm primeiro; ocultas não aparecem; resposta não contém `user_id`.
-12. **Importação:** rodar duas vezes não duplica; grupo inválido gera erro no relatório.
+12. **Importação:** rodar duas vezes não duplica; cada escola recebe uma carteira completa, independentemente das colunas de grupo no CSV.
 
 ---
 

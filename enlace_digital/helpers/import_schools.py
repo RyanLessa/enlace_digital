@@ -8,7 +8,6 @@ from typing import TextIO
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from enlace_digital.interface.models import Group
 from enlace_digital.interface.repositories import (
     NeighborhoodRepository,
     SchoolRepository,
@@ -22,7 +21,6 @@ REQUIRED_COLUMNS = {
     "endereco",
     "latitude",
     "longitude",
-    "grupos",
 }
 
 
@@ -91,7 +89,6 @@ def _parse_row(row: dict[str, str | None]) -> SchoolRow:
     name = _required_value(row, "nome")
     neighborhood = _required_value(row, "bairro")
     municipality = _required_value(row, "municipio")
-    _validate_groups(row.get("grupos") or "")
 
     return SchoolRow(
         name=name,
@@ -110,21 +107,6 @@ def _required_value(row: dict[str, str | None], column: str) -> str:
     if not value:
         raise ValueError(f"'{column}' is required.")
     return value
-
-
-def _validate_groups(value: str) -> None:
-    invalid_groups: list[str] = []
-    for group_name in (item.strip() for item in value.split("|")):
-        if not group_name:
-            continue
-        try:
-            Group(group_name)
-        except ValueError:
-            invalid_groups.append(group_name)
-
-    if invalid_groups:
-        invalid = ", ".join(invalid_groups)
-        raise ValueError(f"Unknown group value(s): {invalid}.")
 
 
 def _parse_coordinate(

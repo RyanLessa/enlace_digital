@@ -55,20 +55,38 @@ class SchoolRepository:
     ) -> list[SchoolSearchResult]:
         selected_groups = list(dict.fromkeys(groups or []))
         ranking = self._build_ranking_value()
-        statement = self._build_unfiltered_groups_statement(ranking=ranking)
+
+        statement = self._final_statement_build(
+            selected_groups=selected_groups,
+            ranking=ranking,
+            neighborhood_id=neighborhood_id,
+            query=query,
+        )
+
+        rows = self.session.execute(statement.limit(limit).offset(offset)).all()
+        return self._build_search_results(rows, selected_groups)
+
+    def _final_statement_build(
+        self,
+        selected_groups: list[Group],
+        ranking: Any,
+        neighborhood_id: int | None,
+        query: str | None) -> Select[Any]:
+        statement = None
+
         if selected_groups:
             statement = self._build_selected_groups_statement(
                 selected_groups=selected_groups,
                 ranking=ranking,
             )
+        else:
+            statement = self._build_unfiltered_groups_statement(ranking=ranking)
 
-        statement = self._apply_search_filters(
+        return self._apply_search_filters(
             statement,
             neighborhood_id=neighborhood_id,
             query=query,
         )
-        rows = self.session.execute(statement.limit(limit).offset(offset)).all()
-        return self._build_search_results(rows, selected_groups)
 
     @staticmethod
     def _build_ranking_value():
@@ -295,9 +313,11 @@ class SchoolRepository:
     def _ensure_wallet_rows(self, school: School) -> None:
         """Create any missing per-group score rows without changing existing scores."""
         existing_scores = {score.group: score for score in school.scores}
-        for group in Group:
-            if group not in existing_scores:
-                self.session.add(SchoolGroupScore(school=school, group=group))
+        school.scores.extend(
+            SchoolGroupScore(group=group)
+            for group in Group
+            if group not in existing_scores
+        )
 
     @staticmethod
     def _normalize_name(name: str | None) -> str:

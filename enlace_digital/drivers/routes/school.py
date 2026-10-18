@@ -14,6 +14,7 @@ def search_schools(
     params: SchoolSearchParams = Depends(),
     controller: SchoolController = Depends(get_school_controller),
 ) -> JSONResponse:
+
     result = controller.search(
         neighborhood_id=params.neighborhood_id,
         groups=params.groups,
