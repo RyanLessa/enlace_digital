@@ -10,7 +10,11 @@ class Neighborhood(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(120))
     municipality: Mapped[str] = mapped_column(String(120))
+    slug: Mapped[str] = mapped_column(String(255))
 
     schools: Mapped[list["School"]] = relationship(back_populates="neighborhood")
 
-    __table_args__ = (UniqueConstraint("name", "municipality"),)
+    __table_args__ = (
+        UniqueConstraint("name", "municipality"),
+        UniqueConstraint("slug", name="uq_neighborhoods_slug"),
+    )

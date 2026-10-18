@@ -38,7 +38,6 @@ class SchoolSearchParams(Presenter):
 
 class SchoolGroupScorePresenter(Presenter):
     group: Group
-    has_adaptation: bool
     average: float | None
     review_count: int = Field(ge=0)
 

@@ -22,6 +22,7 @@ class NeighborhoodService:
                     "id": neighborhood.id,
                     "name": neighborhood.name,
                     "municipality": neighborhood.municipality,
+                    "slug": neighborhood.slug,
                 }
                 for neighborhood in neighborhoods
             ],

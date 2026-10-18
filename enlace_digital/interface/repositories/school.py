@@ -29,7 +29,6 @@ class SchoolSearchResult:
 @dataclass(frozen=True)
 class SchoolGroupScoreProfile:
     group: Group
-    has_adaptation: bool
     average: float | None
     review_count: int
 
@@ -85,7 +84,7 @@ class SchoolRepository:
         selected_groups: list[Group],
         ranking: Any,
     ) -> Select[Any]:
-        """Build a query ranking schools by how many selected groups they support."""
+        """Rank schools by selected groups that have received reviews."""
         matched_scores = (
             select(
                 SchoolGroupScore.school_id.label("school_id"),
@@ -94,7 +93,7 @@ class SchoolRepository:
             )
             .where(
                 SchoolGroupScore.group.in_(selected_groups),
-                SchoolGroupScore.has_adaptation.is_(True),
+                SchoolGroupScore.review_count > 0,
             )
             .group_by(SchoolGroupScore.school_id)
             .subquery()
@@ -164,11 +163,11 @@ class SchoolRepository:
         """Map query rows to search results while preserving requested group order."""
         results: list[SchoolSearchResult] = []
         for school, _, ranking_score in rows:
-            adapted_groups = {
-                score.group for score in school.scores if score.has_adaptation
+            reviewed_groups = {
+                score.group for score in school.scores if score.review_count > 0
             }
             matched_groups = tuple(
-                group for group in selected_groups if group in adapted_groups
+                group for group in selected_groups if group in reviewed_groups
             )
             results.append(
                 SchoolSearchResult(
@@ -213,7 +212,6 @@ class SchoolRepository:
         return tuple(
             SchoolGroupScoreProfile(
                 group=score.group,
-                has_adaptation=score.has_adaptation,
                 average=SchoolRepository._build_display_average(score),
                 review_count=score.review_count,
             )
@@ -245,7 +243,6 @@ class SchoolRepository:
         address: str | None = None,
         latitude: float | None = None,
         longitude: float | None = None,
-        groups: list[Group] | None = None,
     ) -> School:
         normalized_name = self._normalize_name(name)
         statement = select(School).where(
@@ -260,7 +257,6 @@ class SchoolRepository:
                 address=address,
                 latitude=latitude,
                 longitude=longitude,
-                groups=groups,
             )
 
         school = School(
@@ -273,7 +269,7 @@ class SchoolRepository:
         )
         self.session.add(school)
         self.session.flush()
-        self._synchronize_adaptation_groups(school, groups)
+        self._ensure_wallet_rows(school)
         self.session.flush()
         return school
 
@@ -285,32 +281,23 @@ class SchoolRepository:
         address: str | None,
         latitude: float | None,
         longitude: float | None,
-        groups: list[Group] | None,
     ) -> School:
-        """Update an existing school and synchronize its group adaptations."""
+        """Update the imported school fields and ensure its wallet is complete."""
         school.name = name.strip()
         school.address = address
         school.latitude = latitude
         school.longitude = longitude
         school.is_active = True
-        self._synchronize_adaptation_groups(school, groups)
+        self._ensure_wallet_rows(school)
         self.session.flush()
         return school
 
-    def _synchronize_adaptation_groups(
-        self,
-        school: School,
-        groups: list[Group] | None,
-    ) -> None:
-        """Ensure one wallet row per group and synchronize adaptation flags."""
-        adaptations = set(groups or [])
+    def _ensure_wallet_rows(self, school: School) -> None:
+        """Create any missing per-group score rows without changing existing scores."""
         existing_scores = {score.group: score for score in school.scores}
         for group in Group:
-            score = existing_scores.get(group)
-            if score is None:
-                score = SchoolGroupScore(school=school, group=group)
-                self.session.add(score)
-            score.has_adaptation = group in adaptations
+            if group not in existing_scores:
+                self.session.add(SchoolGroupScore(school=school, group=group))
 
     @staticmethod
     def _normalize_name(name: str | None) -> str:

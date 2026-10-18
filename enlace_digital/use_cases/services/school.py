@@ -81,7 +81,6 @@ class SchoolService:
             "scores": [
                 {
                     "group": score.group.value,
-                    "has_adaptation": score.has_adaptation,
                     "average": score.average,
                     "review_count": score.review_count,
                 }

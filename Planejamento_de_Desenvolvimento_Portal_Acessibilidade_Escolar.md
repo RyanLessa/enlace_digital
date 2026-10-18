@@ -62,14 +62,14 @@ erDiagram
 
 | Entidade | Campos | Observações |
 |---|---|---|
-| `Neighborhood` | id, name, municipality | Único em (name, municipality), porque nomes de bairro se repetem entre cidades |
+| `Neighborhood` | id, name, municipality, slug | Único em (name, municipality) e slug; o slug combina bairro e município |
 | `School` | id, name, name_normalized, neighborhood_id, address (opc.), latitude (opc.), longitude (opc.), is_active, created_at | Único em (name_normalized, neighborhood_id). Latitude e longitude ficam nulas até a fase do mapa |
-| `SchoolGroupScore` (carteira) | school_id, group, has_adaptation, review_count, score_sum | PK (school_id, group). Cinco linhas por escola, criadas na importação. Ver seção 5 |
+| `SchoolGroupScore` (carteira) | school_id, group, review_count, score_sum | PK (school_id, group). Cinco linhas por escola, criadas na importação. Ver seção 5 |
 | `User` | id, email (único), password_hash, created_at | E-mail é dado pessoal: nunca devolver em resposta pública |
 | `Review` | id, school_id, user_id (nulo), is_hidden, created_at | Um envio de avaliação. `user_id` nulo = anônima |
 | `ReviewGroupScore` (subavaliação) | review_id, group, score | PK (review_id, group). `score` de 1 a 5 |
 
-**Pendência:** `has_adaptation` pressupõe que o cadastro-semente continua registrando se a escola possui o grupo. Se não for assim, a coluna sai e o filtro passa a usar `review_count > 0` (ver seção 11).
+**Decisão:** não existe coluna de presença de adaptação na carteira. A busca por grupo considera os grupos que já receberam avaliações (`review_count > 0`).
 
 ### 2.3 Modelos em SQLAlchemy 2.0
 
@@ -123,7 +123,6 @@ class SchoolGroupScore(Base):
     __tablename__ = "school_group_scores"
     school_id: Mapped[int] = mapped_column(ForeignKey("schools.id"), primary_key=True)
     group: Mapped[Group] = mapped_column(GroupCol, primary_key=True)
-    has_adaptation: Mapped[bool] = mapped_column(default=False)
     review_count: Mapped[int] = mapped_column(default=0)
     score_sum: Mapped[int] = mapped_column(default=0)               # inteiro: notas são inteiras
 
@@ -381,11 +380,11 @@ Resposta `201`:
   "neighborhood": { "id": 3, "name": "Boa Viagem", "municipality": "Recife" },
   "address": null,
   "scores": [
-    { "group": "visual", "has_adaptation": true, "average": 3.8, "review_count": 21 },
-    { "group": "motora", "has_adaptation": true, "average": null, "review_count": 2 },
-    { "group": "intelectual", "has_adaptation": false, "average": null, "review_count": 0 },
-    { "group": "auditiva", "has_adaptation": true, "average": 4.2, "review_count": 14 },
-    { "group": "psicossocial", "has_adaptation": false, "average": null, "review_count": 0 }
+    { "group": "visual", "average": 3.8, "review_count": 21 },
+    { "group": "motora", "average": null, "review_count": 2 },
+    { "group": "intelectual", "average": null, "review_count": 0 },
+    { "group": "auditiva", "average": 4.2, "review_count": 14 },
+    { "group": "psicossocial", "average": null, "review_count": 0 }
   ]
 }
 ```
@@ -401,7 +400,7 @@ Resposta `201`:
   "offset": 0
 }
 ```
-A Escola A aparece antes porque atende os dois grupos escolhidos, mesmo com `ranking_score` menor que a C.
+A Escola A aparece antes porque recebeu avaliações nos dois grupos escolhidos, mesmo com `ranking_score` menor que a C.
 
 **Criar conta e login**
 ```json
@@ -411,7 +410,7 @@ Login devolve `{ "access_token": "...", "token_type": "bearer" }`.
 
 ### Consulta de busca (referência)
 
-Como a carteira tem uma linha por escola e grupo, tanto a contagem de grupos atendidos quanto a nota de ranking saem de um único join, sem risco de contar em dobro.
+Como a carteira tem uma linha por escola e grupo, tanto a contagem de grupos avaliados quanto a nota de ranking saem de um único join, sem risco de contar em dobro.
 
 ```sql
 SELECT s.id, s.name,
@@ -421,7 +420,7 @@ FROM schools s
 JOIN school_group_scores g
   ON g.school_id = s.id
  AND g."group" IN (:g1, :g2)
- AND g.has_adaptation = 1
+  AND g.review_count > 0
 WHERE s.neighborhood_id = :bairro AND s.is_active = 1
 GROUP BY s.id
 ORDER BY matched DESC, ranking DESC, s.id
@@ -449,12 +448,14 @@ Escola Exemplo A,Boa Viagem,Recife,Rua X 100,,,visual|auditiva
 Escola Exemplo B,Várzea,Recife,,,,motora|intelectual
 ```
 
-`python -m app.scripts.import_schools escolas.csv`
+`python -m enlace_digital.helpers.import_schools escolas.csv`
 
 - Cria bairros e escolas ainda inexistentes; identifica a escola por (nome normalizado, bairro) e atualiza os campos.
-- Cria as 5 linhas da carteira de cada escola nova (zeradas) e marca `has_adaptation` nos grupos listados em `grupos` (valores do enum, separados por `|`).
+- Garante as 5 linhas da carteira da escola (uma por grupo); bairros são identificados por slug e escolas por (nome normalizado, bairro).
 - Rejeita valores de grupo fora do enum com mensagem clara e gera relatório de erros.
-- Latitude e longitude opcionais, sem validação além do intervalo.
+- Latitude e longitude opcionais, limitadas aos intervalos válidos.
+- `grupos` continua sendo validado como valores do enum separados por `|`; não é persistido porque o modelo atual não possui um campo de adaptação.
+- Erros de linhas individuais são reportados sem cancelar a importação das demais linhas; a execução pode ser repetida sem duplicar bairros ou escolas.
 - Por que CSV e não migration: migration versiona estrutura; a lista de escolas vai mudar várias vezes e precisa poder ser reaplicada sem duplicar.
 
 ---
@@ -515,12 +516,11 @@ Presenters validam entrada (grupo no enum, nota de 1 a 5, sem repetição, de 1 
 
 ## 11. Decisões pendentes
 
-1. **Presença da adaptação** (`has_adaptation`): o cadastro-semente continua registrando se a escola possui cada grupo? Se não, retire a coluna e use `review_count > 0` no filtro (escolas sem avaliações não apareceriam na busca por grupo).
-2. **`MIN_REVIEWS_TO_DISPLAY`**: valor mínimo de avaliações para exibir a média.
-3. **Parâmetros do ranking** (`M` e `C`) ou desligar a suavização.
-4. **Alterar e remover avaliação (UC07)**: entra no MVP ou fica para depois.
-5. **Todos os cinco grupos obrigatórios no formulário**, ou ao menos um (o padrão deste documento).
-6. **Origem das coordenadas** para a fase do mapa.
+1. **`MIN_REVIEWS_TO_DISPLAY`**: valor mínimo de avaliações para exibir a média.
+2. **Parâmetros do ranking** (`M` e `C`) ou desligar a suavização.
+3. **Alterar e remover avaliação (UC07)**: entra no MVP ou fica para depois.
+4. **Todos os cinco grupos obrigatórios no formulário**, ou ao menos um (o padrão deste documento).
+5. **Origem das coordenadas** para a fase do mapa.
 
 ---
 
