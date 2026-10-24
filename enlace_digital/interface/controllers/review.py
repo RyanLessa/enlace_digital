@@ -16,11 +16,16 @@ class ReviewController:
         )
 
     def create(
-        self, *, school_id: int, scores: list[tuple[Group, int]]
+        self,
+        *,
+        school_id: int,
+        scores: list[tuple[Group, int]],
+        observation: str | None = None,
     ) -> ServiceResult:
         return self.service.create(
             school_id=school_id,
             scores=scores,
+            observation=observation,
         )
 
     def update(
@@ -28,10 +33,12 @@ class ReviewController:
         *,
         school_id: int,
         scores: list[tuple[Group, int]],
+        observation: str | None = None,
     ) -> ServiceResult:
         return self.service.update(
             school_id=school_id,
             scores=scores,
+            observation=observation,
         )
 
     def delete(self, *, school_id: int) -> ServiceResult:

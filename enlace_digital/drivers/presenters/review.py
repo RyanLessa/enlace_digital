@@ -14,6 +14,7 @@ class ReviewScorePresenter(Presenter):
 
 class ReviewCreatePresenter(Presenter):
     scores: list[ReviewScorePresenter] = Field(min_length=1, max_length=5)
+    observation: str | None = None
 
     @field_validator("scores")
     @classmethod
@@ -34,6 +35,7 @@ class ReviewPresenter(Presenter):
     id: int
     school_id: int
     created_at: datetime
+    observation: str | None = None
     from_registered_user: bool = Field(
         validation_alias=AliasChoices("from_registered_user", "user_id")
     )

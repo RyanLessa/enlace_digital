@@ -21,6 +21,7 @@ class PublicReview:
     school_id: int
     created_at: datetime
     from_registered_user: bool
+    observation: str | None
     scores: tuple[ReviewGroupScore, ...]
 
 
@@ -50,6 +51,7 @@ class ReviewRepository:
                 school_id=review.school_id,
                 created_at=review.created_at,
                 from_registered_user=review.user_id is not None,
+                observation=review.observation,
                 scores=tuple(
                     sorted(review.scores, key=lambda item: item.group.value)
                 ),
@@ -101,6 +103,7 @@ class ReviewRepository:
         *,
         school_id: int,
         scores: list[tuple[Group, int]],
+        observation: str | None = None,
         user_id: int | None = None,
     ) -> Review:
         self._require_active_school(school_id)
@@ -108,6 +111,7 @@ class ReviewRepository:
         review = Review(
             school_id=school_id,
             user_id=user_id,
+            observation=observation,
             scores=[
                 ReviewGroupScore(group=group, score=score)
                 for group, score in scores
@@ -131,6 +135,7 @@ class ReviewRepository:
         school_id: int,
         user_id: int,
         scores: list[tuple[Group, int]],
+        observation: str | None = None,
     ) -> Review:
         review = self.get_user_review(school_id, user_id)
         if review is None:
@@ -153,6 +158,7 @@ class ReviewRepository:
             ReviewGroupScore(group=group, score=score)
             for group, score in scores
         ]
+        review.observation = observation
 
         self.session.flush()
         return review

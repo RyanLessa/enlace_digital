@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import ForeignKey, Index, func, text
+from sqlalchemy import ForeignKey, Index, Text, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from enlace_digital.settings.get_db import Base
@@ -14,6 +14,7 @@ class Review(Base):
     user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL")
     )
+    observation: Mapped[str | None] = mapped_column(Text)
     is_hidden: Mapped[bool] = mapped_column(
         default=False, server_default=text("0"), nullable=False
     )

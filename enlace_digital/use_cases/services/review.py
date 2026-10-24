@@ -55,6 +55,7 @@ class ReviewService:
         *,
         school_id: int,
         scores: list[tuple[Group, int]],
+        observation: str | None = None,
     ) -> ServiceResult:
         invalid_scores = self._validate_scores(scores)
         if invalid_scores is not None:
@@ -69,6 +70,7 @@ class ReviewService:
             review = self.reviews.create(
                 school_id=school_id,
                 scores=scores,
+                observation=observation,
             )
             self.session.commit()
         except SchoolNotFound:
@@ -85,8 +87,9 @@ class ReviewService:
         *,
         school_id: int,
         scores: list[tuple[Group, int]],
+        observation: str | None = None,
     ) -> ServiceResult:
-        del school_id, scores
+        del school_id, scores, observation
         return ServiceResult(
             501,
             {"detail": "Review updates require authentication support."},
@@ -109,16 +112,27 @@ class ReviewService:
                 {"detail": "Provide scores for between one and five groups."},
             )
         groups = [group for group, _ in scores]
-        if any(not isinstance(group, Group) for group in groups):
-            return ServiceResult(422, {"detail": "Unknown accessibility group."})
-        if len(groups) != len(set(groups)):
-            return ServiceResult(422, {"detail": "Groups must be unique."})
-        if any(type(score) is not int or not 1 <= score <= 5 for _, score in scores):
-            return ServiceResult(
-                422,
-                {"detail": "Each group score must be an integer from 1 to 5."},
-            )
-        return None
+
+        VALIDATION_RULES = (
+            (
+                lambda groups, scores: any(not isinstance(g, Group) for g in groups),
+                "Unknown accessibility group.",
+            ),
+            (
+                lambda groups, scores: len(groups) != len(set(groups)),
+                "Groups must be unique.",
+            ),
+            (
+                lambda groups, scores: any(
+                    type(score) is not int or not 1 <= score <= 5 for _, score in scores
+                ),
+                "Each group score must be an integer from 1 to 5.",
+            ),
+        )
+
+        for is_invalid, message in VALIDATION_RULES:
+            if is_invalid(groups, scores):
+                return ServiceResult(422, {"detail": message})
 
     @staticmethod
     def _present_review(review: Review | PublicReview) -> dict[str, Any]:
@@ -132,6 +146,7 @@ class ReviewService:
             "school_id": review.school_id,
             "created_at": review.created_at.isoformat(),
             "from_registered_user": from_registered_user,
+            "observation": review.observation,
             "scores": [
                 {"group": score.group.value, "score": score.score}
                 for score in sorted(review.scores, key=lambda item: item.group.value)

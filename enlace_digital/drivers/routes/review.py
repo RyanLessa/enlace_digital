@@ -36,6 +36,7 @@ def create_review(
     result = controller.create(
         school_id=school_id,
         scores=[(score.group, score.score) for score in payload.scores],
+        observation=payload.observation,
     )
     return JSONResponse(status_code=result.status_code, content=result.content)
 
@@ -49,6 +50,7 @@ def update_review(
     result = controller.update(
         school_id=school_id,
         scores=[(score.group, score.score) for score in payload.scores],
+        observation=payload.observation,
     )
     return JSONResponse(status_code=result.status_code, content=result.content)
 
