@@ -11,9 +11,15 @@ class NeighborhoodRepository:
     def __init__(self, session: Session) -> None:
         self.session = session
 
-    def list_all(self) -> list[Neighborhood]:
-        statement = select(Neighborhood).order_by(
-            Neighborhood.municipality, Neighborhood.name, Neighborhood.id
+    def list_all(self, *, limit: int = 100) -> list[Neighborhood]:
+        statement = (
+            select(Neighborhood)
+            .order_by(
+                Neighborhood.municipality,
+                Neighborhood.name,
+                Neighborhood.id,
+            )
+            .limit(limit)
         )
         return list(self.session.scalars(statement))
 

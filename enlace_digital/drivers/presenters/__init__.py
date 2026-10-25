@@ -3,7 +3,7 @@ from .auth import (
     LoginPresenter,
     RegisterPresenter,
 )
-from .neighborhood import NeighborhoodPresenter
+from .neighborhood import NeighborhoodListParams, NeighborhoodPresenter
 from .review import (
     ReviewCreatePresenter,
     ReviewListParams,
@@ -29,6 +29,7 @@ from .user import (
 __all__ = [
     "AccessTokenPresenter",
     "LoginPresenter",
+    "NeighborhoodListParams",
     "NeighborhoodPresenter",
     "RegisterPresenter",
     "ReviewCreatePresenter",

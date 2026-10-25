@@ -13,8 +13,8 @@ class NeighborhoodService:
     ) -> None:
         self.repository = repository or NeighborhoodRepository(session)
 
-    def list_all(self) -> ServiceResult:
-        neighborhoods = self.repository.list_all()
+    def list_all(self, *, limit: int = 100) -> ServiceResult:
+        neighborhoods = self.repository.list_all(limit=limit)
         return ServiceResult(
             status_code=200,
             content=[

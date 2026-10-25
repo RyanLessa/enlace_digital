@@ -5,5 +5,5 @@ class NeighborhoodController:
     def __init__(self, service: NeighborhoodService) -> None:
         self.service = service
 
-    def list_all(self) -> ServiceResult:
-        return self.service.list_all()
+    def list_all(self, *, limit: int = 100) -> ServiceResult:
+        return self.service.list_all(limit=limit)

@@ -24,6 +24,7 @@ class SchoolSearchResult:
     school: School
     matched_groups: tuple[Group, ...]
     ranking_score: float | None
+    address: str | None = None
 
 
 @dataclass(frozen=True)
@@ -190,6 +191,7 @@ class SchoolRepository:
             results.append(
                 SchoolSearchResult(
                     school=school,
+                    address=school.address,
                     matched_groups=matched_groups,
                     ranking_score=SchoolRepository._to_optional_float(ranking_score),
                 )

@@ -57,6 +57,7 @@ class SchoolPresenter(Presenter):
 class SchoolSearchItemPresenter(Presenter):
     id: int
     name: str
+    address: str | None
     matched_groups: list[Group]
     ranking_score: float | None
 
