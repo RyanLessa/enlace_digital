@@ -1,8 +1,8 @@
-"""first migration
+"""primeira-migracao
 
-Revision ID: 7812b6fd7532
+Revision ID: 6389ec0a8d08
 Revises: 
-Create Date: 2026-10-17 19:35:00.998971
+Create Date: 2026-10-25 19:13:12.548131
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '7812b6fd7532'
+revision: str = '6389ec0a8d08'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -25,11 +25,14 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(length=120), nullable=False),
     sa.Column('municipality', sa.String(length=120), nullable=False),
+    sa.Column('slug', sa.String(length=255), nullable=False),
     sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('name', 'municipality')
+    sa.UniqueConstraint('name', 'municipality'),
+    sa.UniqueConstraint('slug', name='uq_neighborhoods_slug')
     )
     op.create_table('users',
     sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('name', sa.String(length=120), nullable=False),
     sa.Column('email', sa.String(length=254), nullable=False),
     sa.Column('password_hash', sa.String(length=255), nullable=False),
     sa.Column('created_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
@@ -55,6 +58,7 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('school_id', sa.Integer(), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=True),
+    sa.Column('observation', sa.Text(), nullable=True),
     sa.Column('is_hidden', sa.Boolean(), server_default=sa.text('0'), nullable=False),
     sa.Column('created_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
     sa.ForeignKeyConstraint(['school_id'], ['schools.id'], ),
@@ -67,7 +71,6 @@ def upgrade() -> None:
     op.create_table('school_group_scores',
     sa.Column('school_id', sa.Integer(), nullable=False),
     sa.Column('group', sa.Enum('visual', 'motora', 'intelectual', 'auditiva', 'psicossocial', name='group', native_enum=False, length=20), nullable=False),
-    sa.Column('has_adaptation', sa.Boolean(), server_default=sa.text('0'), nullable=False),
     sa.Column('review_count', sa.Integer(), server_default=sa.text('0'), nullable=False),
     sa.Column('score_sum', sa.Integer(), server_default=sa.text('0'), nullable=False),
     sa.CheckConstraint('review_count >= 0 AND score_sum >= review_count * 1 AND score_sum <= review_count * 5', name='ck_wallet_bounds'),

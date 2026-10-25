@@ -16,6 +16,24 @@ class ScoreRepository:
     def __init__(self, session: Session) -> None:
         self.session = session
 
+    def record_review_score(
+        self, school_id: int, group: Group, score: int
+    ) -> None:
+        statement = (
+            update(SchoolGroupScore)
+            .where(
+                SchoolGroupScore.school_id == school_id,
+                SchoolGroupScore.group == group,
+            )
+            .values(
+                review_count=SchoolGroupScore.review_count + 1,
+                score_sum=SchoolGroupScore.score_sum + score,
+            )
+        )
+        result = self.session.execute(statement)
+        if result.rowcount != 1:
+            raise SchoolScoreNotFound(school_id, group)
+
     def apply_delta(
         self,
         school_id: int,

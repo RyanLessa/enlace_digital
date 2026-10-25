@@ -1,6 +1,3 @@
-from dataclasses import dataclass
-from datetime import datetime
-
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
@@ -15,17 +12,6 @@ from .exceptions import ReviewNotFound, SchoolNotFound
 from .score import ScoreRepository
 
 
-@dataclass(frozen=True)
-class PublicReview:
-    id: int
-    school_id: int
-    created_at: datetime
-    from_registered_user: bool
-    user_name: str | None
-    observation: str | None
-    scores: tuple[ReviewGroupScore, ...]
-
-
 class ReviewRepository:
     def __init__(
         self,
@@ -37,36 +23,8 @@ class ReviewRepository:
 
     def list_public(
         self, school_id: int, *, limit: int = 20, offset: int = 0
-    ) -> list[PublicReview]:
-        statement = self._build_public_list_statement(
-            school_id=school_id,
-            limit=limit,
-            offset=offset,
-        )
-
-        reviews = self.session.scalars(statement).all()
-
-        return [
-            PublicReview(
-                id=review.id,
-                school_id=review.school_id,
-                created_at=review.created_at,
-                from_registered_user=review.user_id is not None,
-                user_name=review.user.name if review.user is not None else None,
-                observation=review.observation,
-                scores=tuple(
-                    sorted(review.scores, key=lambda item: item.group.value)
-                ),
-            )
-            for review in reviews
-        ]
-
-    @staticmethod
-    def _build_public_list_statement(
-        *, school_id: int, limit: int, offset: int
-    ):
-        """Build the paginated query for visible reviews, users first."""
-        return (
+    ) -> list[Review]:
+        statement = (
             select(Review)
             .where(Review.school_id == school_id, Review.is_hidden.is_(False))
             .options(selectinload(Review.scores), selectinload(Review.user))
@@ -78,6 +36,7 @@ class ReviewRepository:
             .limit(limit)
             .offset(offset)
         )
+        return list(self.session.scalars(statement).all())
 
     def get_by_id(self, review_id: int) -> Review | None:
         statement = (
@@ -124,9 +83,7 @@ class ReviewRepository:
         self.session.flush()
 
         for group, score in scores:
-            self.scores.apply_delta(
-                school_id, group, d_count=1, d_sum=score
-            )
+            self.scores.record_review_score(school_id, group, score)
 
         self.session.flush()
         return review

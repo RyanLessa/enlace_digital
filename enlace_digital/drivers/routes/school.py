@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, Path
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Path, Query
 from fastapi.responses import JSONResponse
 
 from enlace_digital.drivers.presenters import SchoolSearchParams
@@ -11,9 +13,10 @@ router = APIRouter(prefix="/schools", tags=["schools"])
 
 @router.get("")
 def search_schools(
-    params: SchoolSearchParams = Depends(),
+    params: Annotated[SchoolSearchParams, Query()],
     controller: SchoolController = Depends(get_school_controller),
 ) -> JSONResponse:
+    print(params)
 
     result = controller.search(
         neighborhood_id=params.neighborhood_id,

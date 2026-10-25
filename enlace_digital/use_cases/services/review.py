@@ -4,7 +4,6 @@ from sqlalchemy.orm import Session
 
 from enlace_digital.interface.models import Group, Review
 from enlace_digital.interface.repositories import (
-    PublicReview,
     ReviewRepository,
     SchoolNotFound,
     SchoolRepository,
@@ -31,9 +30,7 @@ class ReviewService:
         limit: int,
         offset: int,
     ) -> ServiceResult:
-        try:
-            self.schools.get_profile(school_id)
-        except SchoolNotFound:
+        if not self.schools.exists_active(school_id):
             return ServiceResult(404, {"detail": "Escola não encontrada."})
 
         reviews = self.reviews.list_public(
@@ -61,11 +58,6 @@ class ReviewService:
         invalid_scores = self._validate_scores(scores)
         if invalid_scores is not None:
             return invalid_scores
-
-        try:
-            self.schools.get_profile(school_id)
-        except SchoolNotFound:
-            return ServiceResult(404, {"detail": "Escola não encontrada."})
 
         try:
             review = self.reviews.create(
@@ -113,44 +105,27 @@ class ReviewService:
                 422,
                 {"detail": "Provide scores for between one and five groups."},
             )
-        groups = [group for group, _ in scores]
-
-        VALIDATION_RULES = (
-            (
-                lambda groups, scores: any(not isinstance(g, Group) for g in groups),
-                "Unknown accessibility group.",
-            ),
-            (
-                lambda groups, scores: len(groups) != len(set(groups)),
-                "Groups must be unique.",
-            ),
-            (
-                lambda groups, scores: any(
-                    type(score) is not int or not 1 <= score <= 5 for _, score in scores
-                ),
-                "Each group score must be an integer from 1 to 5.",
-            ),
-        )
-
-        for is_invalid, message in VALIDATION_RULES:
-            if is_invalid(groups, scores):
-                return ServiceResult(422, {"detail": message})
+        seen_groups: set[Group] = set()
+        for group, score in scores:
+            if not isinstance(group, Group):
+                return ServiceResult(422, {"detail": "Unknown accessibility group."})
+            if group in seen_groups:
+                return ServiceResult(422, {"detail": "Groups must be unique."})
+            if type(score) is not int or not 1 <= score <= 5:
+                return ServiceResult(
+                    422,
+                    {"detail": "Each group score must be an integer from 1 to 5."},
+                )
+            seen_groups.add(group)
 
     @staticmethod
-    def _present_review(review: Review | PublicReview) -> dict[str, Any]:
-        if isinstance(review, PublicReview):
-            from_registered_user = review.from_registered_user
-            user_name = review.user_name
-        else:
-            from_registered_user = review.user_id is not None
-            user_name = review.user.name if review.user is not None else None
-
+    def _present_review(review: Review) -> dict[str, Any]:
         return {
             "id": review.id,
             "school_id": review.school_id,
             "created_at": review.created_at.isoformat(),
-            "from_registered_user": from_registered_user,
-            "user_name": user_name,
+            "from_registered_user": review.user_id is not None,
+            "user_name": review.user.name if review.user is not None else None,
             "observation": review.observation,
             "scores": [
                 {"group": score.group.value, "score": score.score}

@@ -22,6 +22,12 @@ class SchoolGroupScore(Base):
 
     school: Mapped["School"] = relationship(back_populates="scores")
 
+    @property
+    def average(self) -> float | None:
+        if self.review_count == 0:
+            return None
+        return self.score_sum / self.review_count
+
     __table_args__ = (
         CheckConstraint(
             f"review_count >= 0 AND score_sum >= review_count * {NOTA_MIN} "

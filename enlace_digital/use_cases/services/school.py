@@ -63,7 +63,7 @@ class SchoolService:
         return {
             "id": result.school.id,
             "name": result.school.name,
-            "address": result.address,
+            "address": result.school.address,
             "matched_groups": [group.value for group in result.matched_groups],
             "ranking_score": result.ranking_score,
         }

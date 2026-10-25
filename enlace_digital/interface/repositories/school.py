@@ -1,10 +1,8 @@
 import unicodedata
 from dataclasses import dataclass
-from typing import Any
 
-from sqlalchemy import func, literal, select
+from sqlalchemy import Float, and_, cast, func, select
 from sqlalchemy.orm import Session, selectinload
-from sqlalchemy.sql import Select
 
 from enlace_digital.interface.models import (
     Group,
@@ -14,17 +12,12 @@ from enlace_digital.interface.models import (
 )
 from enlace_digital.interface.repositories.exceptions import SchoolNotFound
 
-RANKING_PRIOR_MEAN = 3.0
-RANKING_PRIOR_WEIGHT = 5.0
-MIN_REVIEWS_TO_DISPLAY = 1
-
 
 @dataclass(frozen=True)
 class SchoolSearchResult:
     school: School
     matched_groups: tuple[Group, ...]
     ranking_score: float | None
-    address: str | None = None
 
 
 @dataclass(frozen=True)
@@ -45,6 +38,13 @@ class SchoolRepository:
     def __init__(self, session: Session) -> None:
         self.session = session
 
+    def exists_active(self, school_id: int) -> bool:
+        statement = select(School.id).where(
+            School.id == school_id,
+            School.is_active.is_(True),
+        )
+        return self.session.scalar(statement) is not None
+
     def search(
         self,
         *,
@@ -55,116 +55,27 @@ class SchoolRepository:
         offset: int = 0,
     ) -> list[SchoolSearchResult]:
         selected_groups = list(dict.fromkeys(groups or []))
-        ranking = self._build_ranking_value()
-
-        statement = self._final_statement_build(
-            selected_groups=selected_groups,
-            ranking=ranking,
-            neighborhood_id=neighborhood_id,
-            query=query,
-        )
-
-        rows = self.session.execute(statement.limit(limit).offset(offset)).all()
-        return self._build_search_results(rows, selected_groups)
-
-    def _final_statement_build(
-        self,
-        selected_groups: list[Group],
-        ranking: Any,
-        neighborhood_id: int | None,
-        query: str | None) -> Select[Any]:
-        statement = None
-
+        score_join = [
+            SchoolGroupScore.school_id == School.id,
+            SchoolGroupScore.review_count > 0,
+        ]
         if selected_groups:
-            statement = self._build_selected_groups_statement(
-                selected_groups=selected_groups,
-                ranking=ranking,
-            )
-        else:
-            statement = self._build_unfiltered_groups_statement(ranking=ranking)
+            score_join.append(SchoolGroupScore.group.in_(selected_groups))
 
-        return self._apply_search_filters(
-            statement,
-            neighborhood_id=neighborhood_id,
-            query=query,
+        group_average = (
+            cast(SchoolGroupScore.score_sum, Float)
+            / SchoolGroupScore.review_count
         )
-
-    @staticmethod
-    def _build_ranking_value():
-        """Build the Bayesian-smoothed score expression used in school ranking."""
-        return (
-            RANKING_PRIOR_WEIGHT * RANKING_PRIOR_MEAN
-            + SchoolGroupScore.score_sum
-        ) / (RANKING_PRIOR_WEIGHT + SchoolGroupScore.review_count)
-
-    @staticmethod
-    def _build_selected_groups_statement(
-        *,
-        selected_groups: list[Group],
-        ranking: Any,
-    ) -> Select[Any]:
-        """Rank schools by selected groups that have received reviews."""
-        matched_scores = (
-            select(
-                SchoolGroupScore.school_id.label("school_id"),
-                func.count(SchoolGroupScore.group).label("matched_count"),
-                func.avg(ranking).label("ranking_score"),
-            )
-            .where(
-                SchoolGroupScore.group.in_(selected_groups),
-                SchoolGroupScore.review_count > 0,
-            )
-            .group_by(SchoolGroupScore.school_id)
-            .subquery()
+        matched_count = func.count(SchoolGroupScore.group)
+        statement = (
+            select(School, matched_count, func.avg(group_average))
+            .outerjoin(SchoolGroupScore, and_(*score_join))
+            .where(School.is_active.is_(True))
+            .options(selectinload(School.scores))
+            .group_by(School.id)
         )
-        return (
-            select(
-                School,
-                matched_scores.c.matched_count,
-                matched_scores.c.ranking_score,
-            )
-            .join(matched_scores, matched_scores.c.school_id == School.id)
-            .options(selectinload(School.scores), selectinload(School.neighborhood))
-            .order_by(
-                matched_scores.c.matched_count.desc(),
-                matched_scores.c.ranking_score.desc().nullslast(),
-                School.id,
-            )
-        )
-
-    @staticmethod
-    def _build_unfiltered_groups_statement(ranking: Any) -> Select[Any]:
-        """Build a query ranking active schools without requiring group matches."""
-        school_scores = (
-            select(
-                SchoolGroupScore.school_id.label("school_id"),
-                func.avg(ranking).label("ranking_score"),
-            )
-            .group_by(SchoolGroupScore.school_id)
-            .subquery()
-        )
-        return (
-            select(
-                School,
-                literal(0).label("matched_count"),
-                school_scores.c.ranking_score,
-            )
-            .outerjoin(school_scores, school_scores.c.school_id == School.id)
-            .options(selectinload(School.scores), selectinload(School.neighborhood))
-            .order_by(
-                school_scores.c.ranking_score.desc().nullslast(),
-                School.id,
-            )
-        )
-
-    @staticmethod
-    def _apply_search_filters(
-        statement: Select[Any],
-        *,
-        neighborhood_id: int | None,
-        query: str | None,
-    ) -> Select[Any]:
-        statement = statement.where(School.is_active.is_(True))
+        if selected_groups:
+            statement = statement.having(matched_count > 0)
         if neighborhood_id is not None:
             statement = statement.where(School.neighborhood_id == neighborhood_id)
         normalized_query = SchoolRepository._normalize_name(query)
@@ -172,14 +83,14 @@ class SchoolRepository:
             statement = statement.where(
                 School.name_normalized.contains(normalized_query)
             )
-        return statement
+        ordering = [func.avg(group_average).desc().nullslast(), School.id]
+        if selected_groups:
+            ordering.insert(0, matched_count.desc())
+        statement = statement.order_by(*ordering)
 
-    @staticmethod
-    def _build_search_results(
-        rows: list[Any],
-        selected_groups: list[Group],
-    ) -> list[SchoolSearchResult]:
-        """Map query rows to search results while preserving requested group order."""
+        rows = self.session.execute(
+            statement.limit(limit).offset(offset)
+        ).all()
         results: list[SchoolSearchResult] = []
         for school, _, ranking_score in rows:
             reviewed_groups = {
@@ -191,18 +102,13 @@ class SchoolRepository:
             results.append(
                 SchoolSearchResult(
                     school=school,
-                    address=school.address,
                     matched_groups=matched_groups,
-                    ranking_score=SchoolRepository._to_optional_float(ranking_score),
+                    ranking_score=(
+                        float(ranking_score) if ranking_score is not None else None
+                    ),
                 )
             )
         return results
-
-    @staticmethod
-    def _to_optional_float(value: Any) -> float | None:
-        if value is None:
-            return None
-        return float(value)
 
     def get_profile(self, school_id: int) -> SchoolProfile:
         statement = (
@@ -227,12 +133,11 @@ class SchoolRepository:
     def _build_profile_scores(
         school_scores: list[SchoolGroupScore],
     ) -> tuple[SchoolGroupScoreProfile, ...]:
-        """Build ordered wallet entries, hiding averages below the minimum."""
         group_order = {group: index for index, group in enumerate(Group)}
         return tuple(
             SchoolGroupScoreProfile(
                 group=score.group,
-                average=SchoolRepository._build_display_average(score),
+                average=score.average,
                 review_count=score.review_count,
             )
             for score in sorted(
@@ -240,12 +145,6 @@ class SchoolRepository:
                 key=lambda item: group_order[item.group],
             )
         )
-
-    @staticmethod
-    def _build_display_average(score: SchoolGroupScore) -> float | None:
-        if score.review_count < MIN_REVIEWS_TO_DISPLAY:
-            return None
-        return min(5.0, max(1.0, score.score_sum / score.review_count))
 
     def get_by_id(self, school_id: int) -> School | None:
         statement = (
