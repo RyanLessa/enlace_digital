@@ -38,6 +38,7 @@ class ReviewPresenter(Presenter):
     school_id: int
     created_at: datetime
     observation: str | None = None
+    user_name: str | None = None
     from_registered_user: bool = Field(
         validation_alias=AliasChoices("from_registered_user", "user_id")
     )

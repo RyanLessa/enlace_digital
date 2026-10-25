@@ -21,6 +21,7 @@ class PublicReview:
     school_id: int
     created_at: datetime
     from_registered_user: bool
+    user_name: str | None
     observation: str | None
     scores: tuple[ReviewGroupScore, ...]
 
@@ -51,6 +52,7 @@ class ReviewRepository:
                 school_id=review.school_id,
                 created_at=review.created_at,
                 from_registered_user=review.user_id is not None,
+                user_name=review.user.name if review.user is not None else None,
                 observation=review.observation,
                 scores=tuple(
                     sorted(review.scores, key=lambda item: item.group.value)
@@ -67,7 +69,7 @@ class ReviewRepository:
         return (
             select(Review)
             .where(Review.school_id == school_id, Review.is_hidden.is_(False))
-            .options(selectinload(Review.scores))
+            .options(selectinload(Review.scores), selectinload(Review.user))
             .order_by(
                 Review.user_id.is_(None),
                 Review.created_at.desc(),

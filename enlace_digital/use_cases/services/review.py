@@ -138,16 +138,19 @@ class ReviewService:
 
     @staticmethod
     def _present_review(review: Review | PublicReview) -> dict[str, Any]:
-        from_registered_user = (
-            review.from_registered_user
-            if isinstance(review, PublicReview)
-            else review.user_id is not None
-        )
+        if isinstance(review, PublicReview):
+            from_registered_user = review.from_registered_user
+            user_name = review.user_name
+        else:
+            from_registered_user = review.user_id is not None
+            user_name = review.user.name if review.user is not None else None
+
         return {
             "id": review.id,
             "school_id": review.school_id,
             "created_at": review.created_at.isoformat(),
             "from_registered_user": from_registered_user,
+            "user_name": user_name,
             "observation": review.observation,
             "scores": [
                 {"group": score.group.value, "score": score.score}

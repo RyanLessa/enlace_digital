@@ -19,7 +19,12 @@ from .school import (
     SchoolSearchPresenter,
     SchoolSearchParams,
 )
-from .user import UserCreatePresenter, UserLoginPresenter, UserPresenter
+from .user import (
+    UserCreatePresenter,
+    UserListParams,
+    UserLoginPresenter,
+    UserPresenter,
+)
 
 __all__ = [
     "AccessTokenPresenter",
@@ -38,6 +43,7 @@ __all__ = [
     "SchoolSearchParams",
     "SchoolSearchPresenter",
     "UserCreatePresenter",
+    "UserListParams",
     "UserLoginPresenter",
     "UserPresenter",
 ]

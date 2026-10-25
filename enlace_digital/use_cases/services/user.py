@@ -80,6 +80,23 @@ class UserService:
             },
         )
 
+    def list_users(self, *, limit: int, offset: int) -> ServiceResult:
+        users = self.repository.list_users(limit=limit, offset=offset)
+        return ServiceResult(
+            200,
+            {
+                "items": [self._present_user(user) for user in users],
+                "limit": limit,
+                "offset": offset,
+            },
+        )
+
+    def get_by_id(self, user_id: int) -> ServiceResult:
+        user = self.repository.get_by_id(user_id)
+        if user is None:
+            return ServiceResult(404, {"detail": "Usuário não encontrado."})
+        return ServiceResult(200, self._present_user(user))
+
     @staticmethod
     def decode_payload(payload: str) -> int | None:
         signing_key = jwt.jwk.OctetJWK(

@@ -15,6 +15,10 @@ class UserRepository:
         statement = select(User).where(User.email == email)
         return self.session.scalar(statement)
 
+    def list_users(self, *, limit: int = 20, offset: int = 0) -> list[User]:
+        statement = select(User).order_by(User.id).limit(limit).offset(offset)
+        return list(self.session.scalars(statement).all())
+
     def create(self, name: str, email: str, password_hash: str) -> User:
         user = User(name=name, email=email, password_hash=password_hash)
         self.session.add(user)
