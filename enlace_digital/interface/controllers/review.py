@@ -20,11 +20,13 @@ class ReviewController:
         *,
         school_id: int,
         scores: list[tuple[Group, int]],
+        user_id: int | None = None,
         observation: str | None = None,
     ) -> ServiceResult:
         return self.service.create(
             school_id=school_id,
             scores=scores,
+            user_id=user_id,
             observation=observation,
         )
 

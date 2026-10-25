@@ -18,6 +18,7 @@ class SchoolSearchParams(Presenter):
     def split_groups(cls, groups: object) -> object:
         if isinstance(groups, str):
             return [group.strip() for group in groups.split(",") if group.strip()]
+
         return groups
 
     @field_validator("groups")
@@ -25,6 +26,7 @@ class SchoolSearchParams(Presenter):
     def validate_unique_groups(cls, groups: list[Group]) -> list[Group]:
         if len(groups) != len(set(groups)):
             raise ValueError("Cada grupo pode aparecer apenas uma vez.")
+
         return groups
 
     @field_validator("q")
@@ -32,7 +34,9 @@ class SchoolSearchParams(Presenter):
     def strip_search_text(cls, query: str | None) -> str | None:
         if query is None:
             return None
+
         query = query.strip()
+
         return query or None
 
 

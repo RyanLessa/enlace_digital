@@ -34,7 +34,7 @@ class ReviewService:
         try:
             self.schools.get_profile(school_id)
         except SchoolNotFound:
-            return ServiceResult(404, {"detail": "School not found."})
+            return ServiceResult(404, {"detail": "Escola não encontrada."})
 
         reviews = self.reviews.list_public(
             school_id,
@@ -55,6 +55,7 @@ class ReviewService:
         *,
         school_id: int,
         scores: list[tuple[Group, int]],
+        user_id: int | None = None,
         observation: str | None = None,
     ) -> ServiceResult:
         invalid_scores = self._validate_scores(scores)
@@ -64,18 +65,19 @@ class ReviewService:
         try:
             self.schools.get_profile(school_id)
         except SchoolNotFound:
-            return ServiceResult(404, {"detail": "School not found."})
+            return ServiceResult(404, {"detail": "Escola não encontrada."})
 
         try:
             review = self.reviews.create(
                 school_id=school_id,
                 scores=scores,
+                user_id=user_id,
                 observation=observation,
             )
             self.session.commit()
         except SchoolNotFound:
             self.session.rollback()
-            return ServiceResult(404, {"detail": "School not found."})
+            return ServiceResult(404, {"detail": "Escola não encontrada."})
         except Exception:
             self.session.rollback()
             raise

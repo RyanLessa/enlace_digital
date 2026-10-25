@@ -1,5 +1,8 @@
+import os
 from typing import Any
 
+import jwt
+from jwt.exceptions import JWTDecodeError
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -7,7 +10,12 @@ from enlace_digital.interface.models import User
 from enlace_digital.interface.repositories import UserRepository
 
 from .base import ServiceResult
-from .security import create_access_token, hash_password, verify_password
+from .security import (
+    JWT_ALGORITHM,
+    create_access_token,
+    hash_password,
+    verify_password,
+)
 
 
 class UserService:
@@ -26,7 +34,7 @@ class UserService:
         if self.repository.get_by_email(normalized_email) is not None:
             return ServiceResult(
                 409,
-                {"detail": "An account with this email already exists."},
+                {"detail": "Já existe uma conta com esse e-mail"},
             )
 
         try:
@@ -34,7 +42,7 @@ class UserService:
         except ValueError:
             return ServiceResult(
                 422,
-                {"detail": "Password must not exceed 72 UTF-8 bytes."},
+                {"detail": "Senha grande demais. O limite é de 72 bytes."},
             )
 
         try:
@@ -49,7 +57,7 @@ class UserService:
             if self._is_duplicate_email(error):
                 return ServiceResult(
                     409,
-                    {"detail": "An account with this email already exists."},
+                    {"detail": "Já existe uma conta com esse e-mail"},
                 )
             raise
         except Exception:
@@ -62,7 +70,7 @@ class UserService:
         user = self.repository.get_by_email(email.strip().casefold())
 
         if user is None or not verify_password(password, user.password_hash):
-            return ServiceResult(401, {"detail": "Invalid email or password."})
+            return ServiceResult(401, {"detail": "E-mail ou senha inválidos."})
 
         return ServiceResult(
             200,
@@ -71,6 +79,28 @@ class UserService:
                 "token_type": "bearer",
             },
         )
+
+    @staticmethod
+    def decode_payload(payload: str) -> int | None:
+        signing_key = jwt.jwk.OctetJWK(
+            os.environ["SECRET_KEY"].encode(),
+            alg=JWT_ALGORITHM,
+        )
+        try:
+            decoded = jwt.JWT().decode(
+                payload,
+                key=signing_key,
+                algorithms={JWT_ALGORITHM},
+            )
+        except JWTDecodeError:
+            return None
+
+        if not isinstance(decoded, dict):
+            return None
+        user_id = decoded.get("id")
+        if type(user_id) is not int or user_id <= 0:
+            return None
+        return user_id
 
     @staticmethod
     def _present_user(user: User) -> dict[str, Any]:

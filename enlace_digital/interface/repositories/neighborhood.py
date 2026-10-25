@@ -68,5 +68,5 @@ class NeighborhoodRepository:
         )
         slug = re.sub(r"[^a-z0-9]+", "-", ascii_value).strip("-")
         if not slug:
-            raise ValueError("Neighborhood name and municipality must form a slug.")
+            raise ValueError("Bairro e município não podem ser apenas caracteres especiais.")
         return slug

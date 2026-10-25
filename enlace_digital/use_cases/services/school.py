@@ -51,7 +51,7 @@ class SchoolService:
         except SchoolNotFound:
             return ServiceResult(
                 status_code=404,
-                content={"detail": "School not found."},
+                content={"detail": "Escola não encontrada"},
             )
         return ServiceResult(
             status_code=200,

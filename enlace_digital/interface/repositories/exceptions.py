@@ -1,7 +1,7 @@
 class SchoolNotFound(LookupError):
     def __init__(self, school_id: int) -> None:
         self.school_id = school_id
-        super().__init__(f"School {school_id} was not found or is inactive.")
+        super().__init__(f"Escola com ID {school_id} não encontrada.")
 
 
 class ReviewNotFound(LookupError):
@@ -9,7 +9,7 @@ class ReviewNotFound(LookupError):
         self.school_id = school_id
         self.user_id = user_id
         super().__init__(
-            f"Review for school {school_id} and user {user_id} was not found."
+            f"Revisão da escola {school_id} pelo usuário {user_id} não encontrada."
         )
 
 
@@ -18,5 +18,5 @@ class SchoolScoreNotFound(LookupError):
         self.school_id = school_id
         self.group = group
         super().__init__(
-            f"Score wallet for school {school_id} and group {group} was not found."
+            f"Pontuação da escola {school_id} para o grupo {group} não encontrada."
         )

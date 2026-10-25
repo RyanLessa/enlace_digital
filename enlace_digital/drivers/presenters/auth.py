@@ -18,13 +18,15 @@ class RegisterPresenter(Presenter):
         email = email.strip()
         if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
             raise ValueError("Informe um e-mail válido.")
+
         return email
 
     @field_validator("password")
     @classmethod
     def enforce_bcrypt_password_limit(cls, password: str) -> str:
         if len(password.encode("utf-8")) > MAX_BCRYPT_PASSWORD_BYTES:
-            raise ValueError("A senha excede o limite de 72 bytes do bcrypt.")
+            raise ValueError("Senha grande demais. O limite é de 72 bytes.")
+
         return password
 
 
@@ -38,13 +40,15 @@ class LoginPresenter(Presenter):
         email = email.strip()
         if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
             raise ValueError("Informe um e-mail válido.")
+
         return email
 
     @field_validator("password")
     @classmethod
     def enforce_bcrypt_password_limit(cls, password: str) -> str:
         if len(password.encode("utf-8")) > MAX_BCRYPT_PASSWORD_BYTES:
-            raise ValueError("A senha excede o limite de 72 bytes do bcrypt.")
+            raise ValueError("Senha grande demais. O limite é de 72 bytes.")
+
         return password
 
 

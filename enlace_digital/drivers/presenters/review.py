@@ -22,8 +22,10 @@ class ReviewCreatePresenter(Presenter):
         cls, scores: list[ReviewScorePresenter]
     ) -> list[ReviewScorePresenter]:
         groups = [score.group for score in scores]
+
         if len(groups) != len(set(groups)):
             raise ValueError("Cada grupo pode aparecer apenas uma vez.")
+
         return scores
 
 
@@ -46,6 +48,7 @@ class ReviewPresenter(Presenter):
     def hide_user_identity(cls, value: object) -> bool:
         if isinstance(value, bool):
             return value
+
         return value is not None
 
 

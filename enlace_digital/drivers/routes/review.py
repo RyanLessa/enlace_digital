@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, Path, Response
 from fastapi.responses import JSONResponse
 
+from enlace_digital.drivers.authentication import get_user_id
 from enlace_digital.drivers.presenters import (
     ReviewCreatePresenter,
     ReviewListParams,
@@ -31,11 +32,13 @@ def list_reviews(
 def create_review(
     payload: ReviewCreatePresenter,
     school_id: int = Path(gt=0),
+    user_id: int | None = Depends(get_user_id),
     controller: ReviewController = Depends(get_review_controller),
 ) -> JSONResponse:
     result = controller.create(
         school_id=school_id,
         scores=[(score.group, score.score) for score in payload.scores],
+        user_id=user_id,
         observation=payload.observation,
     )
     return JSONResponse(status_code=result.status_code, content=result.content)
