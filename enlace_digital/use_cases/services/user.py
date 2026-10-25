@@ -12,6 +12,7 @@ from enlace_digital.interface.repositories import UserRepository
 from .base import ServiceResult
 from .security import (
     JWT_ALGORITHM,
+    SECRET_KEY,
     create_access_token,
     hash_password,
     verify_password,
@@ -100,7 +101,7 @@ class UserService:
     @staticmethod
     def decode_payload(payload: str) -> int | None:
         signing_key = jwt.jwk.OctetJWK(
-            os.environ["SECRET_KEY"].encode(),
+            SECRET_KEY.encode(),
             alg=JWT_ALGORITHM,
         )
         try:
@@ -117,6 +118,7 @@ class UserService:
         user_id = decoded.get("id")
         if type(user_id) is not int or user_id <= 0:
             return None
+
         return user_id
 
     @staticmethod

@@ -16,4 +16,6 @@ def get_user_id(authorization: str | None = Header(default=None)) -> int | None:
     ):
         return None
 
-    return UserService.decode_payload(payload)
+    decoded_payload = UserService.decode_payload(payload)
+
+    return decoded_payload

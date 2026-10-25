@@ -16,8 +16,6 @@ def search_schools(
     params: Annotated[SchoolSearchParams, Query()],
     controller: SchoolController = Depends(get_school_controller),
 ) -> JSONResponse:
-    print(params)
-
     result = controller.search(
         neighborhood_id=params.neighborhood_id,
         groups=params.groups,
