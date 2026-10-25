@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, Path
 from fastapi.responses import JSONResponse
 
+from enlace_digital.drivers.authentication import get_user_id
 from enlace_digital.drivers.presenters import (
     UserCreatePresenter,
     UserListParams,
@@ -33,6 +34,21 @@ def login_user(
     controller: UserController = Depends(get_user_controller),
 ) -> JSONResponse:
     result = controller.login(email=payload.email, password=payload.password)
+    return JSONResponse(status_code=result.status_code, content=result.content)
+
+
+@auth_router.get("/whoami")
+def whoami(
+    user_id: int | None = Depends(get_user_id),
+    controller: UserController = Depends(get_user_controller),
+) -> JSONResponse:
+    if user_id is None:
+        return JSONResponse(
+            status_code=401,
+            content={"detail": "Token de autenticação inválido ou ausente."},
+        )
+
+    result = controller.get_by_id(user_id)
     return JSONResponse(status_code=result.status_code, content=result.content)
 
 
