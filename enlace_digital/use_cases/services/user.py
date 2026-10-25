@@ -19,7 +19,9 @@ class UserService:
         self.session = session
         self.repository = repository or UserRepository(session)
 
-    def register(self, *, email: str, password: str) -> ServiceResult:
+    def register(
+        self, *, name: str, email: str, password: str
+    ) -> ServiceResult:
         normalized_email = email.strip().casefold()
         if self.repository.get_by_email(normalized_email) is not None:
             return ServiceResult(
@@ -37,6 +39,7 @@ class UserService:
 
         try:
             user = self.repository.create(
+                name=name,
                 email=normalized_email,
                 password_hash=password_hash,
             )
@@ -57,6 +60,7 @@ class UserService:
 
     def login(self, *, email: str, password: str) -> ServiceResult:
         user = self.repository.get_by_email(email.strip().casefold())
+
         if user is None or not verify_password(password, user.password_hash):
             return ServiceResult(401, {"detail": "Invalid email or password."})
 
@@ -72,6 +76,7 @@ class UserService:
     def _present_user(user: User) -> dict[str, Any]:
         return {
             "id": user.id,
+            "name": user.name,
             "created_at": user.created_at.isoformat(),
         }
 

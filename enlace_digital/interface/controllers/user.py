@@ -5,8 +5,10 @@ class UserController:
     def __init__(self, service: UserService) -> None:
         self.service = service
 
-    def register(self, *, email: str, password: str) -> ServiceResult:
-        return self.service.register(email=email, password=password)
+    def register(
+        self, *, name: str, email: str, password: str
+    ) -> ServiceResult:
+        return self.service.register(name=name, email=email, password=password)
 
     def login(self, *, email: str, password: str) -> ServiceResult:
         return self.service.login(email=email, password=password)

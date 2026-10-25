@@ -15,8 +15,8 @@ class UserRepository:
         statement = select(User).where(User.email == email)
         return self.session.scalar(statement)
 
-    def create(self, email: str, password_hash: str) -> User:
-        user = User(email=email, password_hash=password_hash)
+    def create(self, name: str, email: str, password_hash: str) -> User:
+        user = User(name=name, email=email, password_hash=password_hash)
         self.session.add(user)
         self.session.flush()
         return user

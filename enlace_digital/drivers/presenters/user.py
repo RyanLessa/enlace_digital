@@ -5,7 +5,7 @@ from .base import Presenter
 
 
 class UserCreatePresenter(RegisterPresenter):
-    pass
+    name: str
 
 
 class UserLoginPresenter(LoginPresenter):
@@ -14,4 +14,5 @@ class UserLoginPresenter(LoginPresenter):
 
 class UserPresenter(Presenter):
     id: int
+    name: str
     created_at: datetime

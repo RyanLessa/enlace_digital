@@ -14,7 +14,11 @@ def register_user(
     payload: UserCreatePresenter,
     controller: UserController = Depends(get_user_controller),
 ) -> JSONResponse:
-    result = controller.register(email=payload.email, password=payload.password)
+    result = controller.register(
+        name=payload.name,
+        email=payload.email,
+        password=payload.password,
+    )
     return JSONResponse(status_code=result.status_code, content=result.content)
 
 
