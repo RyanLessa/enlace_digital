@@ -5,7 +5,7 @@ import jwt
 
 MAX_BCRYPT_PASSWORD_BYTES = 72
 JWT_ALGORITHM = "HS256"
-
+SECRET_KEY = os.environ.get("SECRET_KEY", "default_secret_key")
 
 def hash_password(password: str) -> str:
     password_bytes = _encode_password(password)
@@ -23,7 +23,7 @@ def verify_password(password: str, password_hash: str) -> bool:
 
 
 def create_access_token(user_id: int) -> str:
-    secret = os.environ["SECRET_KEY"].encode()
+    secret = SECRET_KEY.encode()
     signing_key = jwt.jwk.OctetJWK(secret, alg=JWT_ALGORITHM)
     return jwt.JWT().encode(
         {"id": user_id},
