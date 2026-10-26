@@ -18,6 +18,9 @@ class School(Base):
     address: Mapped[str | None] = mapped_column(String(300))
     latitude: Mapped[float | None] = mapped_column(Float)
     longitude: Mapped[float | None] = mapped_column(Float)
+    total_reviews: Mapped[int] = mapped_column(
+        default=0, server_default=text("0"), nullable=False
+    )
     is_active: Mapped[bool] = mapped_column(
         default=True, server_default=text("1"), nullable=False
     )

@@ -51,6 +51,7 @@ class SchoolPresenter(Presenter):
     name: str
     neighborhood: NeighborhoodPresenter
     address: str | None
+    total_reviews: int = Field(ge=0)
     scores: list[SchoolGroupScorePresenter]
 
 

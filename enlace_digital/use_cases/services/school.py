@@ -79,6 +79,7 @@ class SchoolService:
                 "municipality": profile.neighborhood.municipality,
             },
             "address": profile.school.address,
+            "total_reviews": profile.school.total_reviews,
             "scores": [
                 {
                     "group": score.group.value,

@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session, selectinload
 
 from enlace_digital.interface.models import (
@@ -82,6 +82,8 @@ class ReviewRepository:
         self.session.add(review)
         self.session.flush()
 
+        self._change_total_review_count(school_id, 1)
+
         for group, score in scores:
             self.scores.record_review_score(school_id, group, score)
 
@@ -159,6 +161,7 @@ class ReviewRepository:
                     d_sum=-score.score,
                 )
 
+        self._change_total_review_count(school_id, -1)
         self.session.delete(review)
         self.session.flush()
 
@@ -190,3 +193,18 @@ class ReviewRepository:
         if school is None:
             raise SchoolNotFound(school_id)
         return school
+
+    def _change_total_review_count(self, school_id: int, delta: int) -> None:
+        statement = update(School).where(School.id == school_id)
+        if delta < 0:
+            statement = statement.where(School.total_reviews >= -delta)
+
+        result = self.session.execute(
+            statement.values(total_reviews=School.total_reviews + delta)
+        )
+        if result.rowcount != 1:
+            if self.session.get(School, school_id) is not None:
+                raise RuntimeError(
+                    "A escola não possui reviews suficientes para remover."
+                )
+            raise SchoolNotFound(school_id)

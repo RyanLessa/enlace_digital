@@ -175,5 +175,7 @@ pyrightconfig.json
 
 # database
 enlace.db
+enlace.db-shm
+enlace.db-wal
 
 # End of https://www.toptal.com/developers/gitignore/api/python
