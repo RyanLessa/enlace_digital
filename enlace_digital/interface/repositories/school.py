@@ -59,6 +59,7 @@ class SchoolRepository:
             SchoolGroupScore.school_id == School.id,
             SchoolGroupScore.review_count > 0,
         ]
+
         if selected_groups:
             score_join.append(SchoolGroupScore.group.in_(selected_groups))
 
@@ -74,16 +75,21 @@ class SchoolRepository:
             .options(selectinload(School.scores))
             .group_by(School.id)
         )
+
         if selected_groups:
             statement = statement.having(matched_count > 0)
+
         if neighborhood_id is not None:
             statement = statement.where(School.neighborhood_id == neighborhood_id)
+
         normalized_query = SchoolRepository._normalize_name(query)
         if normalized_query:
             statement = statement.where(
                 School.name_normalized.contains(normalized_query)
             )
+
         ordering = [func.avg(group_average).desc().nullslast(), School.id]
+
         if selected_groups:
             ordering.insert(0, matched_count.desc())
         statement = statement.order_by(*ordering)
@@ -91,7 +97,9 @@ class SchoolRepository:
         rows = self.session.execute(
             statement.limit(limit).offset(offset)
         ).all()
+
         results: list[SchoolSearchResult] = []
+
         for school, _, ranking_score in rows:
             reviewed_groups = {
                 score.group for score in school.scores if score.review_count > 0
@@ -99,6 +107,7 @@ class SchoolRepository:
             matched_groups = tuple(
                 group for group in selected_groups if group in reviewed_groups
             )
+
             results.append(
                 SchoolSearchResult(
                     school=school,
@@ -108,6 +117,7 @@ class SchoolRepository:
                     ),
                 )
             )
+
         return results
 
     def get_profile(self, school_id: int) -> SchoolProfile:
@@ -119,6 +129,7 @@ class SchoolRepository:
                 selectinload(School.scores),
             )
         )
+
         school = self.session.scalar(statement)
         if school is None:
             raise SchoolNotFound(school_id)
@@ -152,6 +163,7 @@ class SchoolRepository:
             .where(School.id == school_id)
             .options(selectinload(School.scores), selectinload(School.neighborhood))
         )
+
         return self.session.scalar(statement)
 
     def upsert(
@@ -168,6 +180,7 @@ class SchoolRepository:
             School.name_normalized == normalized_name,
             School.neighborhood_id == neighborhood_id,
         )
+
         school = self.session.scalar(statement)
         if school is not None:
             return self._update_school(
